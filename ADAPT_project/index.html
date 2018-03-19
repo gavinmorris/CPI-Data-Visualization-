@@ -13,13 +13,13 @@
         <h2>Choose your filter</h2>
         <hr />
         Choose an option:
-        <select  id="select1" name ="select1" onchange="populate(this.id, 'select2')">
+        <select  class = "customSelect" id="select1" name ="select1" onchange="populate(this.id, 'select2')">
           <option value =""></option>
           <option value ="Region">Region</option>
           <option value ="Country">Country</option>
         </select>
         <hr />
-        Filter from option:
+        Display:
         <select  id="select2" name ="select2" onchange="preference(this.id); updateChart()"></select>
         <hr />
         <svg width="960" height="650"></svg>
@@ -68,7 +68,7 @@
 
         });
     }
-    
+
     //what user wants to display
     function preference(s2){
       var pref = document.getElementById(s2);
