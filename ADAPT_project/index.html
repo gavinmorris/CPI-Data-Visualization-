@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+  <head>
+    <title>D3 for layout management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link rel ="stylesheet" href = "css/style.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  </head>
+    <body>
+        <h1>ADAPT CPI Visuals</h1>
+        <h2>Choose your filter</h2>
+        <hr />
+        Choose an option:
+        <select  id="select1" name ="select1" onchange="populate(this.id, 'select2')">
+          <option value =""></option>
+          <option value ="Region">Region</option>
+          <option value ="Country">Country</option>
+        </select>
+        <hr />
+        Filter from option:
+        <select  id="select2" name ="select2" onchange="preference(this.id); updateChart()"></select>
+        <hr />
+        <svg width="960" height="650"></svg>
+    </body>
+
+    <script>
+    //link to csv in my Gist
+    var file = "https://gist.githubusercontent.com/gavinmorris/d852c308f7b14b170229e57551f6998b/raw/935d346625f3b537456f3a0659e7a56248f8f621/CPI2012-2017.csv";
+
+    var optPreference;
+
+    function populate(s1, s2){
+
+      //define values gotten from input
+      var s1 = document.getElementById(s1);
+      var s2 = document.getElementById(s2);
+
+      //set to blank
+      s2.innerHTML = "";
+
+      d3.csv(file , function(data) {
+
+          //if option is Country
+          if(s1.value === "Country"){
+              var optArray = [];
+              optArray.push(" ");
+              for(var i =1; i<data.length;i++){
+                optArray.push(data[i-1].Country);
+              };
+          }
+
+          //if Option is Region
+          else if(s1.value === "Region"){
+            //options to choose from
+            var optArray = [" ", "AP", "WE/EU", "AME", "MENA", "SSA", "ECA"];
+          }
+
+          //loop through and create new options
+          for(var i in optArray){
+            var val = optArray[i];
+            var newOpt = document.createElement("option");
+            newOpt.value = val;
+            newOpt.innerHTML = val;
+            s2.options.add(newOpt);
+          }
+
+        });
+    }
+    
+    //what user wants to display
+    function preference(s2){
+      var pref = document.getElementById(s2);
+      optPreference = pref.value;
+    }
+
+    //define svg: graphics
+    var svg = d3.select("svg");
+
+    //set dimensions
+    var margin = {top: 20, right: 20, bottom: 80, left: 40};
+
+    //svg dimesions
+    var width = +svg.attr("width") - margin.left - margin.right;
+    var height = +svg.attr("height") - margin.top - margin.bottom;
+
+    //add svg canvas
+    var g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+          //bottom of bar on x-axis
+          var x0 = d3.scaleBand()
+              .rangeRound([0, width])
+              .paddingInner(0.1);
+
+          //top of bar on-axis
+          var x1 = d3.scaleBand()
+              .padding(0.05);
+
+          //y- axis
+          var y = d3.scaleLinear()
+              .rangeRound([height, 0]);
+
+          //color schemes
+          var z = d3.scaleOrdinal()
+              .range(["#61BB46", "#FDB827", "#F5821F", "#E03D97", "#963D97", "#009DDC"]);
+
+          //read in data
+          d3.csv( file , function(d, i, columns) {
+                //parse scores from strings to numbers (d[3] -> d[9])
+                for (var i = 3; i < columns.length; ++i)
+                  d[columns[i]] = +d[columns[i]];
+                return d;
+
+                //catch errors
+              }, function(error, data) {
+                if (error) throw error;
+
+                //keys = 6 seperate scores, creates new array
+                var keys = data.columns.slice(3);
+
+              //add the x axis
+              g.append("g")
+                  .attr("class", "axis")
+                  .attr("transform", "translate(0," + height + ")")
+                  .call(d3.axisBottom(x0))
+                  .selectAll("text")
+                  .attr("dx", "-.8em")
+                  .attr("dy", ".25em")
+                  .attr("transform", "rotate(-60)" )
+                  .style("text-anchor", "end")
+                  .attr("font-size", "10px");
+
+              //add the y axis
+              g.append("g")
+                  .attr("class", "axis")
+                  .call(d3.axisLeft(y).ticks(null, "s"))
+                .append("text")
+                  .attr("x", 2)
+                  .attr("y", y(y.ticks().pop()) + 0.5)
+                  .attr("dy", "0.32em")
+                  .attr("fill", "#000")
+                  .attr("font-weight", "bold")
+                  .attr("text-anchor", "start")
+                  .text("CPI Score");
+
+              //add in legend for graphs
+              var legend = g.append("g")
+                  .attr("font-family", "sans-serif")
+                  .attr("font-size", 10)
+                  .attr("text-anchor", "end")
+                .selectAll("g")
+                .data(keys.slice().reverse())
+                .enter().append("g")
+                  .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+              legend.append("rect")
+                  .attr("x", width - 19)
+                  .attr("width", 35)
+                  .attr("height", 20)
+                  .attr("fill", z);
+
+              legend.append("text")
+                  .attr("x", width - 24)
+                  .attr("y", 9.5)
+                  .attr("dy", "0.32em")
+                  .text(function(d) { return d; });
+
+              });
+
+          //when filter is applied this function is called
+          function updateChart(){
+
+              var file = "https://gist.githubusercontent.com/gavinmorris/d852c308f7b14b170229e57551f6998b/raw/2e9f1f58ba63502fd8ecd1cad2bc689289660cee/CPI2012-2017.csv";
+
+              //read in data from  again
+              d3.csv( file , function(d, i, columns) {
+                //parse scores from strings to numbers (d[3] -> d[9])
+                for (var i = 3; i < columns.length; ++i)
+                  d[columns[i]] = +d[columns[i]];
+                return d;
+
+                //catch errors
+              }, function(error, data) {
+                if (error) throw error;
+
+                //keys = 6 seperate scores, creates new array
+                var keys = data.columns.slice(3);
+
+                //define axis domains
+                x0.domain(data.map(function(d) { if(d.Region === optPreference){ return d.Country;} else if(d.Country === optPreference){ return d.Country;} }));
+                x1.domain(keys).rangeRound([0, x0.bandwidth()]);
+                y.domain([0, d3.max(data, function(d) { return d3.max(keys, function(key) { return d[key]; }); })]).nice();
+
+                //remove all of the previous data
+                var bars = g.selectAll("g")
+                        .remove()
+                        .exit()
+                        .data(data);
+
+                      //draw bar chart according to filtered data
+                      bars.enter().append("g")
+                        .attr("transform", function(d) { if(d.Region === optPreference){ return "translate(" + x0(d.Country) + ",0)";}  else if(d.Country === optPreference){  return "translate(" + x0(d.Country) + ",0)";} })
+                        .selectAll("g")
+                        .data(function(d) { return keys.map(function(key) { return {key: key, value: d[key]}; }); })  //array which stores CPI scores
+                        .enter().append("rect")
+                        .attr("x", function(d) {  return x1(d.key); })
+                        .attr("y", function(d) { return y(0); })
+                        .transition()
+                        .duration(1250)
+                        .attr("y", function(d) { return y(d.value); })
+                        .attr("width", x1.bandwidth())
+                        .attr("height", function(d) { return height - y(d.value); })
+                        .attr("fill", function(d) { return z(d.key); });
+
+                         //add the x axis
+                         g.append("g")
+                             .attr("class", "axis")
+                             .attr("transform", "translate(0," + height + ")")
+                             .call(d3.axisBottom(x0))
+                             .selectAll("text") //format text on x-axis
+                             .attr("dx", "-.8em")
+                             .attr("dy", ".25em")
+                             .attr("transform", "rotate(-60)" )
+                             .style("text-anchor", "end")
+                             .attr("font-size", "10px");
+
+                         //add the y axis
+                         g.append("g")
+                             .attr("class", "axis")
+                             .call(d3.axisLeft(y).ticks(null, "s"))
+                           .append("text")  //add text for y-axis
+                             .attr("x", 2)
+                             .attr("y", y(y.ticks().pop()) + 0.5)
+                             .attr("dy", "0.32em")
+                             .attr("fill", "#000")
+                             .attr("font-weight", "bold")
+                             .attr("text-anchor", "start")
+                             .text("CPI Score");
+
+                         //add in legend for graphs
+                         var legend = g.append("g")
+                             .attr("font-family", "sans-serif")
+                             .attr("font-size", 10)
+                             .attr("text-anchor", "end")
+                           .selectAll("g")
+                           .data(keys.slice().reverse())
+                           .enter().append("g")
+                             .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+                         legend.append("rect")
+                             .attr("x", width - 19)
+                             .attr("width", 35)
+                             .attr("height", 20)
+                             .attr("fill", z);
+
+                         legend.append("text")
+                             .attr("x", width - 24)
+                             .attr("y", 9.5)
+                             .attr("dy", "0.32em")
+                             .text(function(d) { return d; });
+
+              });
+          }
+
+    </script>
+</html>
